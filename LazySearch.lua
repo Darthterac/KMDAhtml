@@ -1,14 +1,11 @@
--- Old Gods Guild Chat — Member Search & Roster Tools
+-- LazySearch — Guild Member Search & Roster Tools
+-- Version 1.1.0  07/16/26
 -- Author: Doug "Lazyeyez"
--- "Void Interface" theme — pass 1 (dark mode + class-color hover states)
---
--- Design intent: this addon is named after the Old Gods, so the reskin leans
--- into that instead of doing a generic dark-mode pass. Panels are near-black
--- void glass, there's a single restrained violet "pulse" accent used for
--- focus/emphasis, and player class colors are the only saturated color
--- allowed to appear — and only on hover, so the UI reads as quiet until a
--- person interacts with it. See the OGUI module below for the shared kit;
--- reuse it for any future frames instead of hand-rolling new templates.
+-- "Void Interface" theme — pass 2
+--[[     Midnight, chillin' at AM PM
+Coolin', drinkin' apple juice in Evil's BM
+The sound's up loud to attract attention
+Armor All-ed tires on a lowered suspension  ]]
 
 local tableAccents = {
     ["À"] = "A",
@@ -230,28 +227,22 @@ local function GetRankColor(rank)
     return RANK_COLORS[rank] or "FFFFFF"
 end
 
---#region Modern UI Kit ("Void Interface")
--- Shared dark-glass styling for every KMDA frame in this file. Palette is
--- deliberately restrained: void-black panels, one violet "Old God pulse"
--- accent used sparingly (focus states, the signature pulse line), and
--- player class colors as the only saturated color allowed to appear — and
--- only in response to a hover, so the UI feels like it reacts to a person
--- rather than shouting all the time. Reuse OGUI for new frames going
--- forward instead of reaching for Blizzard's stock templates.
-
+--#region UI Kit ("Void Interface")
 local OGUI = {}
 
+
 OGUI.Color = {
-    bg         = { 0.043, 0.039, 0.055, 0.97 }, -- panel fill
-    bgAlt      = { 0.075, 0.067, 0.094, 1.00 }, -- recessed / control fill
-    border     = { 0.20, 0.16, 0.28, 1.00 },    -- hairline border, idle
-    accent     = { 0.56, 0.30, 0.85, 1.00 },    -- "Old God pulse" violet
-    text       = { 0.92, 0.91, 0.95, 1.00 },
-    textMuted  = { 0.52, 0.49, 0.60, 1.00 },
-    textHeader = { 0.72, 0.56, 0.89, 1.00 },
-    textBtn    = { 0.35, 0.20, 0.79, 0.85 },
-    online     = { 0.24, 0.84, 0.60, 1.00 }, -- teal-green
-    offline    = { 0.79, 0.31, 0.42, 1.00 }, -- muted rose
+    bg         = { 0.043, 0.039, 0.055, 0.97 },  -- #0B0A0E
+    bgAlt      = { 0.075, 0.067, 0.094, 1.00 },  -- #131118
+    border     = { 0.243, 0.176, 0.373, 1.00 },  -- #3e2d5f
+    accent     = { 0.56, 0.30, 0.85, 1.00 },     -- #8F4DD9
+    text       = { 0.92, 0.91, 0.95, 1.00 },     -- #EAE8F2
+    textMuted  = { 0.52, 0.49, 0.60, 1.00 },     -- #857D99
+    textHeader = { 0.72, 0.56, 0.89, 1.00 },     -- #B88FE3
+    textInfo   = { 0.24, 0.66, 0.92, 1.00 },     -- #3da8ea
+    textBtn    = { 0.35, 0.20, 0.79, 0.85 },     -- #5933C9
+    online     = { 0.24, 0.84, 0.60, 1.00 },     -- #3DD699
+    offline    = { 0.79, 0.31, 0.42, 1.00 },     -- #C94F6B
 }
 
 OGUI.Backdrop = {
@@ -260,6 +251,72 @@ OGUI.Backdrop = {
     edgeSize = 1,
     insets   = { left = 1, right = 1, top = 1, bottom = 1 },
 }
+
+OGUI.borders = {
+    --theme midnight
+    midnight = {
+        border = "ui-frame-midnight-border",
+        isAtlas = true,
+        bg = "ui-frame-midnight-backgroundtile",
+        isAtlasBg = true,
+        TLX = -16,
+        TLY = 16,
+        BRX = 16,
+        BRY = -16,
+    },
+    --theme thewarwithin
+    tww = {
+        border = "ui-frame-thewarwithin-border",
+        isAtlas = true,
+        bg = "ui-frame-thewarwithin-backgroundtile",
+        isAtlasBg = true,
+        TLX = -16,
+        TLY = 16,
+        BRX = 16,
+        BRY = -16,
+
+    },
+    --theme KissMyDarnassus
+    kmda = {
+        border = "Interface\\AddOns\\LazySearch\\textures\\ui-kissmydarnassus-border.tga",
+        isAtlas = false,
+        bg = "UI-Frame-Kyrian-BackgroundTile",
+        isAtlasBg = true,
+        TLX = -70,
+        TLY = 70,
+        BRX = 70,
+        BRY = -70,
+    },
+}
+
+-- New in v1.1 Easymode frame skins for themes
+function OGUI.CreateBGandBorder(frame, theme)
+    local selected = OGUI.borders[theme]
+    if not selected then return end
+
+    frame.border = frame:CreateTexture(nil, "BORDER");
+    frame.border:ClearAllPoints()
+    frame.border:SetPoint("TOPLEFT", frame, "TOPLEFT", selected.TLX, selected.TLY)
+    frame.border:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", selected.BRX, selected.BRY)
+    if selected.isAtlas then
+        frame.border:SetAtlas(selected.border)
+    else
+        frame.border:SetTexture(selected.border)
+    end
+
+    frame.bg = frame:CreateTexture(nil, "BACKGROUND")
+    frame.bg:SetAllPoints(frame)
+    if selected.isAtlasBg then
+        frame.bg:SetAtlas(selected.bg)
+    else
+        frame.bg:SetTexture(selected.bg)
+    end
+    frame.bg:SetHorizTile(true)
+    frame.bg:SetVertTile(true)
+    frame.bg:SetVertexColor(1, 1, 1, 1)
+
+    return frame.border, frame.bg
+end
 
 function OGUI.HexToRGB(hex, alpha)
     hex = hex or "FFFFFF"
@@ -271,9 +328,6 @@ function OGUI.HexToRGB(hex, alpha)
     }
 end
 
--- Several stock Blizzard templates (GameMenuButtonTemplate, InputBoxTemplate,
--- etc.) don't ship with the backdrop API mixed in. Retrofit it rather than
--- requiring every CreateFrame call in the file to change templates.
 function OGUI.EnsureBackdrop(frame)
     if not frame.SetBackdrop then
         Mixin(frame, BackdropTemplateMixin)
@@ -290,10 +344,7 @@ function OGUI.SkinPanel(frame, colorOverride)
     frame:SetBackdropBorderColor(b[1], b[2], b[3], b[4])
 end
 
--- The UI's one animated flourish: a thin line under a title bar that
--- breathes slowly, like a heartbeat from the deep. Used once per top-level
--- frame — deliberately not reused anywhere else, so it stays a signature
--- rather than a tic.
+-- The UI's one animated flourish: a thin line under a title bar that breathes slowly.
 function OGUI.AddPulseLine(parent, width, yOffset)
     local line = parent:CreateTexture(nil, "ARTWORK")
     local a = OGUI.Color.accent
@@ -380,7 +431,32 @@ end
 -- Small flat "×" close button used in place of Blizzard's stock close art,
 -- so every frame in the addon shares the same chrome.
 function OGUI.CreateCloseButton(parent)
-    local btn = OGUI.CreateButton(parent, 22, 22, "×", { 0.79, 0.31, 0.42, 1 })
+    local btn = OGUI.CreateButton(parent, 22, 22, "×", { 0.79, 0.31, 0.42, 0 })
+
+    btn:SetNormalAtlas("common-button-tertiary-normal-electrified")
+    local normalTex = btn:GetNormalTexture()
+    if normalTex then
+        normalTex:ClearAllPoints()
+        normalTex:SetPoint("TOPRIGHT", 0, 0)
+        normalTex:SetSize(22, 22)
+    end
+
+    btn:SetHighlightAtlas("common-button-tertiary-depressed-normal-glow-purple")
+    local highlightTex = btn:GetHighlightTexture()
+    if highlightTex then
+        highlightTex:ClearAllPoints()
+        highlightTex:SetPoint("TOPRIGHT", 0, 0)
+        highlightTex:SetSize(22, 22)
+    end
+
+    btn:SetPushedAtlas("common-button-tertiary-depressed-normal-purple")
+    local pushedTex = btn:GetPushedTexture()
+    if pushedTex then
+        pushedTex:ClearAllPoints()
+        pushedTex:SetPoint("TOPRIGHT", 0, 0)
+        pushedTex:SetSize(21, 21)
+    end
+
     btn:GetFontString():SetFont("Fonts\\FRIZQT__.TTF", 16)
     btn:SetPoint("TOPRIGHT", -6, -6)
     return btn
@@ -400,7 +476,13 @@ function OGUI.SkinEditBox(editBox)
     editBox:SetBackdropColor(c[1], c[2], c[3], c[4])
     local b = OGUI.Color.border
     editBox:SetBackdropBorderColor(b[1], b[2], b[3], b[4])
+
+    editBox:SetFontObject("ChatFontNormal")
     editBox:SetTextInsets(8, 8, 0, 0)
+
+    local d = OGUI.Color.textHeader
+    editBox:SetTextColor(d[1], d[2], d[3], d[4])
+
 
     editBox:SetScript("OnEditFocusGained", function(self)
         local a = OGUI.Color.accent
@@ -455,14 +537,13 @@ local function FadeRow(row, stripe, classColor)
         end
     end)
 end
-
 --#endregion
 
 --#region MemberSearch RightClick Functions
 local function ArmoryLinkLoL(CopiedNameLink, playerName)
-    local linkFrame = _G["OldGodsArmoryLinkFrame"]
+    local linkFrame = _G["LSArmoryLinkFrame"]
     if not linkFrame then
-        linkFrame = CreateFrame("Frame", "OldGodsArmoryLinkFrame", UIParent, "BackdropTemplate")
+        linkFrame = CreateFrame("Frame", "LSArmoryLinkFrame", UIParent, "BackdropTemplate")
         linkFrame:SetSize(450, 130)
         linkFrame:SetPoint("CENTER")
         linkFrame:SetFrameStrata("TOOLTIP")
@@ -479,7 +560,7 @@ local function ArmoryLinkLoL(CopiedNameLink, playerName)
         OGUI.AddPulseLine(linkFrame, 140, -30)
 
         linkFrame.instruction = linkFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        local muted = OGUI.Color.textMuted
+        local muted = OGUI.Color.textHeader
         linkFrame.instruction:SetTextColor(muted[1], muted[2], muted[3], 1)
         linkFrame.instruction:SetPoint("TOP", linkFrame, "TOP", 0, -42)
         linkFrame.instruction:SetText("Press Control + C to copy")
@@ -502,7 +583,7 @@ local function ArmoryLinkLoL(CopiedNameLink, playerName)
 
         editBox:SetScript("OnKeyUp", function(self, key)
             if IsControlKeyDown() and key == "C" then
-                PlaySoundFile("Interface\\AddOns\\OldGods\\Sounds\\unregistered\\mixkit-open-selected-alert6.mp3")
+                PlaySoundFile(6838456) --v1.1.1 changed from recycled file from my other addon
                 print(CreateAtlasMarkup("Battlenet-ClientIcon-WoW", 18, 18), " Link Copied!")
                 linkFrame:Hide()
             end
@@ -520,9 +601,11 @@ local function ArmoryLinkLoL(CopiedNameLink, playerName)
     linkFrame.editBox:SetFocus()
 end
 
-local function UrlFriendlyRealmName(realm) -- Function to format the return of realm from UnitName("target")
-    if not realm then return nil end       -- and GetRealmName() into Blizzards url syntax.
-    -- No need for a comparison table we just format in this order
+-- Function to format the return of realm from UnitName("target")
+-- and GetRealmName() into Blizzards url syntax.
+-- No need for a comparison table we just format in this order
+local function UrlFriendlyRealmName(realm)
+    if not realm then return nil end
 
     realm = realm:gsub("([A-Za-z])[Oo][Ff](%u)", "%1-of-%2") -- 1. Puts the -of- in the string                 | "AlterofStorms" to "Atler-of-Storms" |
     realm = realm:gsub("(%l)(%u)", "%1-%2")                  -- 2. Puts the - between lower and uppercase
@@ -594,7 +677,7 @@ local function CreatePlayerManagementFrame()
     playerManagementFrame = CreateFrame("Frame", "KMDAPlayerManagementFrame", UIParent, "BackdropTemplate")
     playerManagementFrame:SetSize(300, 320)
     playerManagementFrame:SetFrameStrata("TOOLTIP")
-    OGUI.SkinPanel(playerManagementFrame)
+    OGUI.CreateBGandBorder(playerManagementFrame, "midnight")
     playerManagementFrame:EnableMouse(true)
     playerManagementFrame:SetClampedToScreen(true)
     playerManagementFrame.currentClassColor = nil -- set per-player in ShowPlayerManagementFrame, used for button hovers
@@ -741,47 +824,6 @@ local function CreatePlayerManagementFrame()
     end
 
     playerManagementFrame.publicNoteText = publicNoteText
-
-    --[[ Detailed Notes Label
-    local detailedNotesLabel = playerManagementFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightCenter")
-    detailedNotesLabel:SetPoint("TOPLEFT", publicNoteText, "BOTTOMLEFT", 0, -15)
-    detailedNotesLabel:SetText("Create/Edit Player Notes:") ]]
-
-    --[[ Open Notes Button
-    local detailedNotesBtn = CreateFrame("Button", nil, playerManagementFrame, "UIPanelButtonTemplate")
-    detailedNotesBtn:SetSize(150, 25)
-    detailedNotesBtn:SetPoint("TOPLEFT", detailedNotesLabel, "BOTTOMLEFT", 0, -5)
-    detailedNotesBtn:SetText("Open Notes")
-
-    local time = 0
-    detailedNotesBtn:SetScript("OnEnter", function(self)
-        self:SetScript("OnUpdate", function(self, elapsed)
-            time = (time + elapsed) % 100
-            detailedNotesLabel:SetRotation(math.sin(time * 1.8) * math.rad(5))
-        end)
-    end)
-
-    detailedNotesBtn:SetScript("OnLeave", function(self)
-        self:SetScript("OnUpdate", nil)
-        detailedNotesLabel:SetRotation(0)
-    end)
-
-    detailedNotesBtn:SetScript("OnClick", function()
-        local playerName = playerManagementFrame.selectedPlayer
-        if not playerName then return end
-
-        CreateNotesFrame()
-
-        if KMDA_SavedNotes and KMDA_SavedNotes[playerName] then
-            KMDA_OpenSavedNote(playerName)
-        else
-            KMDA_NewNote()
-            if notesFrame and notesFrame.titleBox then
-                notesFrame.titleBox:SetText(playerName)
-                notesFrame.editBox:SetFocus()
-            end
-        end
-    end)]]
 
     -- Close Button
     local closeButton = OGUI.CreateCloseButton(playerManagementFrame)
@@ -956,23 +998,6 @@ local function CreateRightClickMenu()
         end
     end, MenuHoverColor)
 
-    --[[ Notes Option
-    KMDARightClickMenu.notes = CreateMenuOption(KMDARightClickMenu, "Notes", -75, function()
-        if KMDARightClickMenu.playerName then
-            CreateNotesFrame()
-            local playerName = KMDARightClickMenu.playerName
-            if KMDA_SavedNotes and KMDA_SavedNotes[playerName] then
-                KMDA_OpenSavedNote(playerName)
-            else
-                KMDA_NewNote()                              -- Clears fields
-                if notesFrame and notesFrame.titleBox then
-                    notesFrame.titleBox:SetText(playerName) -- Set title for new note
-                    notesFrame.editBox:SetFocus()
-                end
-            end
-        end
-    end)]]
-
     --ModMenu_GetArmoryLink
     KMDARightClickMenu.armoryLink = CreateMenuOption(KMDARightClickMenu, "Armory Link", -78, function()
         if KMDARightClickMenu.playerName then
@@ -1017,69 +1042,6 @@ local function stripChars(str)
 end
 
 -- Refresh the Guild Roster Search Table
---[[
-local function RefreshGuildRosterCache()
-    wipe(guildRosterCache) -- Clear old data
-    for i = 1, GetNumGuildMembers() do
-        local name, rank, _, _, class, _, _, _, online, _, _, _, _, _ = GetGuildRosterInfo(i)
-        local hyperlinkName = "|Hplayer:" .. name .. "|h[" .. name .. "]|h"
-
-        local year, month, day, hour = GetGuildRosterLastOnline(i)
-        year = year and year or 0
-        month = month and month or 0
-        day = day and day or 0
-        hour = hour and hour or 0
-        local offlineHours = year * 8760 + month * 720 + day * 24 + hour
-
-        table.insert(guildRosterCache, {
-            linkName       = hyperlinkName,
-            name           = name,
-            normalizedName = stripChars(name),
-            rank           = rank,
-            class          = class,
-            online         = online,
-            year           = year,
-            month          = month,
-            day            = day,
-            hour           = hour,
-            lastOnline     = year .. "y " .. month .. "m " .. day .. "d " .. hour .. "h"
-        })
-    end
-
-    table.sort(guildRosterCache, function(a, b)
-        -- Online players first
-        if a.online ~= b.online then
-            return a.online
-        end
-
-        -- If both are online → sort by name
-        if a.online then
-            return a.name < b.name
-        end
-
-        -- Both offline → compare last online time
-        if a.year ~= b.year then
-            return a.year < b.year
-        end
-
-        if a.month ~= b.month then
-            return a.month < b.month
-        end
-
-        if a.day ~= b.day then
-            return a.day < b.day
-        end
-
-        if a.hour ~= b.hour then
-            return a.hour < b.hour
-        end
-
-        -- final fallback
-        return a.name < b.name
-    end)
-end
-]]
-
 local function RefreshGuildRosterCache()
     wipe(guildRosterCache) -- Clear old data
 
@@ -1337,7 +1299,9 @@ local function CreateSearchFrame()
     searchFrame:SetPoint("CENTER")
     searchFrame:SetFrameStrata("FULLSCREEN_DIALOG")
     searchFrame:SetFrameLevel(1)
-    OGUI.SkinPanel(searchFrame)
+    OGUI.CreateBGandBorder(searchFrame, "midnight")
+
+
     searchFrame:EnableMouse(true)
     searchFrame:SetMovable(true)
     searchFrame:RegisterForDrag("LeftButton")
@@ -1404,10 +1368,10 @@ local function CreateSearchFrame()
 
     -- Headers for columns (offsets tuned to line up with the row grid below)
     local headers = {
-        { text = "NAME",   width = 185, point = "TOPLEFT", refFrame = "searchFrame", offsetX = 0,   offsetY = -68 },
+        { text = "NAME",   width = 185, point = "TOPLEFT", refFrame = "searchFrame", offsetX = -30, offsetY = -68 },
         { text = "RANK",   width = 185, point = "TOPLEFT", refFrame = "searchFrame", offsetX = 155, offsetY = -68 },
         { text = "STATUS", width = 185, point = "TOPLEFT", refFrame = "searchFrame", offsetX = 275, offsetY = -68 },
-        { text = "RATING", width = 185, point = "TOPLEFT", refFrame = "searchFrame", offsetX = 420, offsetY = -68 },
+        { text = "RATING", width = 185, point = "TOPLEFT", refFrame = "searchFrame", offsetX = 408, offsetY = -68 },
     }
 
     for _, header in ipairs(headers) do
@@ -1419,22 +1383,19 @@ local function CreateSearchFrame()
         headerText:SetTextColor(m[1], m[2], m[3])
     end
 
-    -- Thin divider between the header row and the scrolling results
     local divider = searchFrame:CreateTexture(nil, "ARTWORK")
-    local b = OGUI.Color.border
-    divider:SetColorTexture(b[1], b[2], b[3], 0.8)
-    divider:SetSize(548, 1.5)
+    divider:SetAtlas("CovenantChoice-Celebration-NightFaeGlowLine")
+    divider:SetSize(searchFrame:GetWidth(), 20)
     divider:SetPoint("TOP", searchFrame, "TOP", 0, -85)
 
     -- Scrollable list for results
     scrollFrame = CreateFrame("ScrollFrame", "KMDA_SearchResultsScrollFrame", searchFrame, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetSize(searchFrame:GetWidth() - 20, searchFrame:GetHeight() - 98)
-    scrollFrame:SetPoint("BOTTOM", 0, 10)
-
+    scrollFrame:SetSize(searchFrame:GetWidth() - 20, searchFrame:GetHeight() - 123)
+    scrollFrame:SetPoint("BOTTOM", 0, 15)
     -- Best-effort scrollbar tint so it doesn't clash with the void palette;
     -- harmless no-op if the client's scrollbar structure doesn't match.
     local scrollBar = _G[(scrollFrame:GetName() or "") .. "ScrollBar"]
-    
+
     if scrollBar then
         scrollBar:SetThumbTexture(464139)
         local thumb = scrollBar.GetThumbTexture and scrollBar:GetThumbTexture()
@@ -1449,7 +1410,6 @@ local function CreateSearchFrame()
     return SR_scrollChild
 end
 
-
 -- Main function to initiate and refresh member search
 local function KMDA_MemberSearch()
     C_GuildInfo.GuildRoster() -- Trigger GUILD_ROSTER_UPDATE
@@ -1457,18 +1417,39 @@ local function KMDA_MemberSearch()
     CreateSearchFrame()
     searchFrame:Show()
 end
+--endregion Member Search 
 
-SLASH_LAZYSEARCH1 = "/lazy"
-SLASH_LAZYSEARCH2 = "/ls"
-
-SlashCmdList["LAZYSEARCH"] = KMDA_MemberSearch
-
+--#region Guild Frame Button (tab)
 local myTab = CreateFrame("Button", "LazySearchFrameTab", CommunitiesFrame, "BackdropTemplate")
 myTab:SetPoint("BOTTOMLEFT", CommunitiesFrame.GuildInfoTab, "BOTTOMRIGHT", -35, -58)
-myTab:SetSize(42, 42)
+myTab:SetSize(41, 41)
+
 myTab:SetNormalAtlas("ui-debug-tool-icon-large")
-myTab:SetHighlightAtlas("communities-icon-searchmagnifyingglass")
-myTab:SetPushedAtlas("communities-icon-searchmagnifyingglass")
+local normalTex = myTab:GetNormalTexture()
+if normalTex then
+    normalTex:ClearAllPoints()
+    normalTex:SetPoint("TOPLEFT", myTab, "TOPLEFT", 1, -1)
+    normalTex:SetSize(40, 40)
+end
+
+myTab:SetHighlightAtlas("communities-create-avatar-border-selected")
+local highlightTex = myTab:GetHighlightTexture()
+if highlightTex then
+    highlightTex:ClearAllPoints()
+    highlightTex:SetPoint("TOPLEFT", myTab, "TOPLEFT", 3.25, -3.25)
+    highlightTex:SetPoint("BOTTOMRIGHT", myTab, "BOTTOMRIGHT", -3.25, 3.25)
+    highlightTex:SetSize(39, 39)
+end
+
+myTab:SetPushedAtlas("ui-debug-tool-icon-large")
+local pushedTex = myTab:GetPushedTexture()
+if pushedTex then
+    pushedTex:ClearAllPoints()
+    pushedTex:SetPoint("TOPLEFT", myTab, "TOPLEFT", 1, -1)
+    pushedTex:SetSize(38, 38)
+    pushedTex:SetVertexColor(0.75, 0.80, 0.75, 1)
+end
+
 myTab:SetScript("OnEnter", function()
     GameTooltip:SetOwner(myTab, "ANCHOR_TOPRIGHT", 98, -7)
     GameTooltip:ClearLines()
@@ -1483,5 +1464,163 @@ end)
 myTab:SetScript("OnClick", function()
     KMDA_MemberSearch()
 end)
+--endregion
 
---#endregion MemberSearch
+--Slash commands 
+SLASH_LAZYSEARCH1 = "/lazy"
+SLASH_LAZYSEARCH2 = "/ls"
+SlashCmdList["LAZYSEARCH"] = KMDA_MemberSearch
+--[[
+function CheckHighGoldQuests()
+    _G.MyQuests = {}
+    
+    local mapID = C_Map.GetBestMapForUnit("player")
+    if not mapID then 
+        print("|cffff0000[QuestCheck Error]:|r Map data unavailable.")
+        return 
+    end
+    
+    local quests = C_TaskQuest.GetQuestsOnMap(mapID)
+    if not quests or #quests == 0 then
+        print("|cffffaa00[QuestCheck]:|r No active quests found on this map.")
+        return
+    end
+
+    local goldThreshold = 9000000 -- 900 Gold represented in copper currency value
+    local foundCounter = 0
+
+    for _, questData in ipairs(quests) do
+        local questID = questData.questID
+        if questID then
+            table.insert(_G.MyQuests, questID)
+            
+            -- Read the gold payload safely using the global fallback sequence
+            local copperReward = GetQuestLogRewardMoney(questID)
+            if not copperReward or copperReward == 0 then
+                local _, _, _, _, money, bonus, _, _ = C_QuestInfoSystem.GetQuestRewardCurrencies(questID)
+                copperReward = money or bonus or 0
+            end
+            
+            -- Verify if the quest matches your 900g target rules
+            if copperReward and copperReward > goldThreshold then
+                foundCounter = foundCounter + 1
+                
+                -- FIXED: Using C_QuestLog.GetQuestInfo() instead of GetQuestInfoByID()
+                local rawName = C_TaskQuest.GetQuestInfoByQuestID(questID)
+                
+                -- SANITIZATION: If the server hasn't sent the title string, fall back safely
+                local questName = (rawName and rawName ~= "") and rawName or "Fetching Title from Server..."
+                local goldValue = math.floor(copperReward / 10000)
+                
+                print(string.format("|cffffd700[%d]|r %s (ID: %d) -> |cff00ff00%dg|r", foundCounter, questName, questID, goldValue))
+            end
+        end
+    end
+
+    if foundCounter == 0 then
+        print("|cffaaaaaa[QuestCheck]:|r No quests on this map reward over 900 gold.")
+    end
+end
+]]
+function CheckHighGoldQuests()
+    local mapID = C_Map.GetBestMapForUnit("player")
+    if not mapID then 
+        print("|cffff0000[QuestCheck Error]:|r Map data unavailable.")
+        return 
+    end
+    
+    if not _G.LastCheckedMapID or _G.LastCheckedMapID ~= mapID then
+        _G.MyQuests = {}
+        _G.LastCheckedMapID = mapID
+        print("|cff00ffff[QuestCheck]:|r New Map Zone detected! Wiped quest tracking table.")
+    else
+        _G.MyQuests = {}  -- gloabl will turn loacl when im not golfing in my addon
+    end
+    
+    local quests = C_TaskQuest.GetQuestsOnMap(mapID)
+    if not quests or #quests == 0 then
+        print("|cffffaa00[QuestCheck]:|r No active quests found on this map.")
+        return
+    end
+
+    local goldThreshold = 9000000 -- 900 Gold represented in copper currency value
+    local foundCounter = 0
+    
+    -- Waypoint caching references
+    local lastTargetQuestName = nil --move to last target thinking ahead like the table not being wiped, new zone with lingering reference
+    local lastTargetX, lastTargetY = nil, nil
+
+    for _, questData in ipairs(quests) do
+        local questID = questData.questID
+        if questID then
+            table.insert(_G.MyQuests, questID)
+            
+            -- Read the gold payload safely using the global fallback sequence
+            local copperReward = GetQuestLogRewardMoney(questID)
+            if not copperReward or copperReward == 0 then
+                local _, _, _, _, money, bonus, _, _ = C_QuestInfoSystem.GetQuestRewardCurrencies(questID) --found you bi** now give me my money
+                copperReward = money or bonus or 0
+            end
+            
+            -- Verify
+            if copperReward and copperReward > goldThreshold then
+                foundCounter = foundCounter + 1
+                
+                local rawName = C_TaskQuest.GetQuestInfoByQuestID(questID)
+                                         --.GetTimeLeft ;) soon ok slow down
+                
+                --sanitize (AI did this)
+                local questName = (rawName and rawName ~= "") and rawName or "Fetching Title from Server..."
+                
+                -- I added abs cause I wanted to lol
+                local goldValue = abs(math.floor(copperReward / 10000))
+                
+                print(string.format("|cffffd700[%d]|r %s (ID: %d) -> |cff00ff00%dg|r", foundCounter, questName, questID, goldValue))
+
+                --lastTarget vars get values
+                if questData.x and questData.y then
+                    lastTargetQuestName = questName
+                    lastTargetX = questData.x
+                    lastTargetY = questData.y
+                end
+            end
+        end
+    end
+
+    --buggy let AI take the wheen here Im tired boss
+    if foundCounter > 0 and lastTargetX and lastTargetY then
+        local point = CreateVector2D(lastTargetX, lastTargetY)
+        C_Map.ClearUserWaypoint()
+        C_Map.SetUserWaypoint(UiMapPoint.CreateFromVector2D(mapID, point))
+        C_SuperTrack.SetSuperTrackedUserWaypoint(true)
+        print(string.format("|cff00ffff[Waypoint Set]:|r Now tracking final match: %s!", lastTargetQuestName))
+    end
+
+    if foundCounter == 0 then
+        print("|cffaaaaaa[QuestCheck]:|r No quests on this map reward over 900 gold.")
+    end
+end
+
+
+--[[                                      ©LazyEyez 2026
+
+Youre still here :) well now that you went over the project and are dying for more I give you
+these macros as a parting gift, check out the awesome golfing on the key announce!
+
+--Track Gold gains and losses - Farmers rejoice 
+/run local m=GetMoney()if IsShiftKeyDown()then cG=m print("Tracking gains or losses from: 0")else if not cG then print("Hold SHIFT to start or reset gold traking!")else print((m<cG and"Lost: "or"Gained: ")..GetCoinTextureString(abs(m-cG)))end end
+
+--pets (doing something that involves 3d models thinking about the Nzoth Eye pet, would look good in the addon)
+/run local a=C_PetJournal.GetOwnedPetIDs() for k,v in ipairs(a) do local speciesID = C_PetJournal.GetPetInfoByPetID(v); print("GUID: " .. v .. " | SpeciesID: " .. speciesID) end
+
+--Announce your M+ key in guild chat ```3:15:59[Sin]:I have a +2 Murder Row 3:16:18[John]:I can heal you!```
+/run P,G=C_MythicPlus,"GetOwnedKeystone";M,L=P[G.."ChallengeMapID"](),P[G.."Level"]();N=C_ChallengeMode.GetMapUIInfo(M);C_ChatInfo.SendChatMessage("I have a +"..L.." "..N,"GUILD")
+                                             Cya in game!
+]]
+--/run local id,n,s=C_Map.GetBestMapForUnit("player"),GetInstanceInfo(),ScriptErrorsFrame;s.ScrollFrame.Text:SetText("id: "..id.." name: "..n)if not s:IsShown()then s:Show()end
+--/run ch,s,f="",ScriptErrorsFrame,ChatFrame1;for i=1,f:GetNumMessages()do ch=ch..f:GetMessageInfo(i).."\n";s.ScrollFrame.Text:SetText(ch)if not s:IsShown()then s:Show()end end
+--local s=ScriptErrorsFrame.ScrollFrame;ts=not ts;st=ts and"20"or"24";s.Text:SetFontObject(ChatFontNormal)s.Text:SetFont("Fonts\\FRIZQT__.TTF",st,"")
+
+--/run local s=ScriptErrorsFrame.ScrollFrame tgl=(not tgl)s.Text:SetFontObject(ChatFontNormal)s.Text:SetFont("Fonts\\FRIZQT__.TTF", tgl and 20 or 24, "OUTLINE")s.Text:SetText(s.Text:GetText() or "")
+
+ --/run local s=ScriptErrorsFrame.ScrollFrame WoW_MyToggleFont=(not WoW_MyToggleFont) s.Text:SetFontObject(ChatFontNormal) s.Text:SetFont("Fonts\\FRIZQT__.TTF", WoW_MyToggleFont and 20 or 24, "") s.Text:SetText(s.Text:GetText() or "")
