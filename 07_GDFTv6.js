@@ -21,6 +21,57 @@ javascript: (function () {
             return new Date(isoStr).toLocaleString();
         }
 
+        // ==================== PRIVATE PROFILE TRACKING ====================
+        function logPrivateProfileUser(userCard) {
+            const privateProfiles = JSON.parse(
+                localStorage.getItem('wow_private_profiles') || '{}'
+            );
+            
+            if (!privateProfiles[userCard]) {
+                privateProfiles[userCard] = {
+                    firstSeen: new Date().toISOString(),
+                    sightings: [],
+                    altNames: []
+                };
+            }
+            
+            const entry = privateProfiles[userCard];
+            entry.lastSeen = new Date().toISOString();
+            entry.sightings.push({
+                timestamp: new Date().toISOString(),
+                topicUrl: window.location.href,
+                topicTitle: document.title
+            });
+            
+            // Keep only last 50 sightings per user
+            if (entry.sightings.length > 50) {
+                entry.sightings = entry.sightings.slice(-50);
+            }
+            
+            localStorage.setItem('wow_private_profiles', JSON.stringify(privateProfiles));
+        }
+
+        function logAltAssociation(userCard, altName) {
+            const privateProfiles = JSON.parse(
+                localStorage.getItem('wow_private_profiles') || '{}'
+            );
+            
+            if (!privateProfiles[userCard]) {
+                privateProfiles[userCard] = {
+                    firstSeen: new Date().toISOString(),
+                    sightings: [],
+                    altNames: []
+                };
+            }
+            
+            if (!privateProfiles[userCard].altNames.includes(altName)) {
+                privateProfiles[userCard].altNames.push(altName);
+            }
+            
+            localStorage.setItem('wow_private_profiles', JSON.stringify(privateProfiles));
+        }
+        // =====================================================================
+
         function inspectTopicUsers() {
             document.querySelectorAll('a.character-name').forEach(el => {
                 if (el.dataset.customDataInjected) return;
@@ -37,6 +88,13 @@ javascript: (function () {
                         const readTime = formatSeconds(profile.recent_time_read);
                         let maxTrust = profile.trust_level || 0;
                         
+                        // Check if profile is private
+                        const isPrivate = !profile.last_seen_at && !profile.last_posted_at;
+                        
+                        if (isPrivate) {
+                            logPrivateProfileUser(userCard);
+                        }
+                        
                         if (profile.groups && Array.isArray(profile.groups)) {
                             profile.groups.forEach(g => {
                                 const gName = typeof g === 'string' ? g : (g.name || '');
@@ -50,11 +108,11 @@ javascript: (function () {
 
                         const container = document.createElement('div');
                         container.style.fontSize = '11px';
-                        container.style.color = '#38bdf8';
+                        container.style.color = isPrivate ? '#ff6b6b' : '#38bdf8';
                         container.style.marginTop = '4px';
                         container.style.lineHeight = '1.2';
                         container.innerHTML = `
-                            <div><strong>[ID: ${userCard}]</strong></div>
+                            <div><strong>[ID: ${userCard}]${isPrivate ? ' 🔒 PRIVATE' : ''}</strong></div>
                             <div>last seen: ${lastSeen}</div>
                             <div>last post: ${lastPost}</div>
                             <div>read time: ${readTime}</div>
@@ -123,6 +181,8 @@ javascript: (function () {
         font-family: sans-serif;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
         width: 340px;
+        max-height: 80vh;
+        overflow-y: auto;
     `;
 
     modal.innerHTML = `
@@ -155,7 +215,7 @@ javascript: (function () {
             "
         >${ignoreList.join('\n')}</textarea>
 
-        <div style="margin-top: 12px; display: flex; justify-content: space-between;">
+        <div style="margin-top: 12px; display: flex; justify-content: space-between; gap: 8px;">
             <button
                 id="fools-save"
                 style="
@@ -166,6 +226,8 @@ javascript: (function () {
                     font-weight: bold;
                     border-radius: 4px;
                     cursor: pointer;
+                    flex: 1;
+                    font-size: 11px;
                 "
             >Save Apply</button>
 
@@ -178,9 +240,41 @@ javascript: (function () {
                     padding: 8px 14px;
                     border-radius: 4px;
                     cursor: pointer;
+                    flex: 1;
+                    font-size: 11px;
                 "
             >Exit</button>
         </div>
+
+        <button
+            id="fools-view-private"
+            style="
+                background: #1a472a;
+                color: #4ade80;
+                border: 1px solid #22c55e;
+                padding: 8px 14px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 11px;
+                width: 100%;
+                margin-top: 12px;
+            "
+        >📋 View Private Profiles</button>
+
+        <button
+            id="fools-export-private"
+            style="
+                background: #472a2a;
+                color: #ffa500;
+                border: 1px solid #ff8c00;
+                padding: 8px 14px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 11px;
+                width: 100%;
+                margin-top: 8px;
+            "
+        >📥 Export CSV</button>
     `;
 
     document.body.appendChild(modal);
@@ -197,6 +291,115 @@ javascript: (function () {
         localStorage.setItem('wow_ignore_list', JSON.stringify(newList));
         modal.remove();
         applyFilter();
+    };
+
+    document.getElementById('fools-view-private').onclick = () => {
+        const privateProfiles = JSON.parse(
+            localStorage.getItem('wow_private_profiles') || '{}'
+        );
+        
+        let report = 'PRIVATE PROFILE TRACKING\n';
+        report += '='.repeat(60) + '\n\n';
+        
+        const count = Object.keys(privateProfiles).length;
+        if (count === 0) {
+            report += 'No private profiles tracked yet.\n';
+        } else {
+            for (const [userCard, data] of Object.entries(privateProfiles)) {
+                report += `[${userCard}]\n`;
+                report += `  First Seen: ${new Date(data.firstSeen).toLocaleString()}\n`;
+                report += `  Last Seen: ${new Date(data.lastSeen).toLocaleString()}\n`;
+                report += `  Total Sightings: ${data.sightings.length}\n`;
+                if (data.altNames && data.altNames.length > 0) {
+                    report += `  Possible Alts: ${data.altNames.join(', ')}\n`;
+                }
+                report += '\n';
+            }
+        }
+        
+        const reportModal = document.createElement('div');
+        reportModal.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999999;
+            background: #121212;
+            color: #e0e0e0;
+            border: 2px solid #22c55e;
+            padding: 20px;
+            border-radius: 8px;
+            width: 600px;
+            max-height: 500px;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.9);
+        `;
+        
+        reportModal.innerHTML = `
+            <h3 style="color: #4ade80; margin-top: 0;">Private Profile Log (${count} users)</h3>
+            <textarea readonly style="
+                width: 100%;
+                height: 350px;
+                background: #1e1e1e;
+                color: #4ade80;
+                border: 1px solid #22c55e;
+                border-radius: 4px;
+                padding: 8px;
+                box-sizing: border-box;
+                font-family: monospace;
+                font-size: 11px;
+            ">${report}</textarea>
+            <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <button onclick="this.parentElement.parentElement.remove()" style="
+                    background: #5627a6;
+                    color: #8ecbef;
+                    border: none;
+                    padding: 8px 14px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    flex: 1;
+                ">Close</button>
+                <button onclick="navigator.clipboard.writeText(document.querySelector('#reportText').value); alert('Copied to clipboard!');" style="
+                    background: #22c55e;
+                    color: #000;
+                    border: none;
+                    padding: 8px 14px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    flex: 1;
+                    font-weight: bold;
+                ">Copy</button>
+            </div>
+        `;
+        
+        // Add hidden textarea for clipboard
+        const hiddenArea = document.createElement('textarea');
+        hiddenArea.id = 'reportText';
+        hiddenArea.value = report;
+        hiddenArea.style.display = 'none';
+        reportModal.appendChild(hiddenArea);
+        
+        document.body.appendChild(reportModal);
+    };
+
+    document.getElementById('fools-export-private').onclick = () => {
+        const privateProfiles = JSON.parse(
+            localStorage.getItem('wow_private_profiles') || '{}'
+        );
+        
+        let csv = 'UserCard,FirstSeen,LastSeen,TotalSightings,Alts\n';
+        
+        for (const [userCard, data] of Object.entries(privateProfiles)) {
+            const alts = data.altNames ? data.altNames.join(';') : '';
+            csv += `"${userCard}","${data.firstSeen}","${data.lastSeen}",${data.sightings.length},"${alts}"\n`;
+        }
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `wow-private-profiles-${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        alert('CSV exported!');
     };
 
     async function syncNativeIgnores() {
