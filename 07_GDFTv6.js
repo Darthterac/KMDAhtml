@@ -22,26 +22,67 @@ javascript: (function () {
         }
 
         // ==================== PRIVATE PROFILE TRACKING ====================
-        function logPrivateProfileUser(userCard) {
+        function getCurrentTopicId() {
+            const match = window.location.href.match(/\/wow\/t\/([^/]+)/);
+            return match ? match[1] : null;
+        }
+
+        function shouldLogPrivateProfile(userCard) {
             const privateProfiles = JSON.parse(
                 localStorage.getItem('wow_private_profiles') || '{}'
             );
             
             if (!privateProfiles[userCard]) {
+                return true; // New user, log them
+            }
+
+            const currentTopicId = getCurrentTopicId();
+            const entry = privateProfiles[userCard];
+            
+            // Check if we've seen this user in this topic recently
+            if (entry.topicSightings && entry.topicSightings[currentTopicId]) {
+                const lastSightingTime = new Date(entry.topicSightings[currentTopicId]).getTime();
+                const now = new Date().getTime();
+                const eightHoursMs = 8 * 60 * 60 * 1000;
+                
+                // Skip if seen in this topic within last 8 hours
+                if (now - lastSightingTime < eightHoursMs) {
+                    return false;
+                }
+            }
+            
+            return true; // Either new topic or 8+ hours have passed
+        }
+
+        function logPrivateProfileUser(userCard) {
+            const privateProfiles = JSON.parse(
+                localStorage.getItem('wow_private_profiles') || '{}'
+            );
+            
+            const currentTopicId = getCurrentTopicId();
+            
+            if (!privateProfiles[userCard]) {
                 privateProfiles[userCard] = {
                     firstSeen: new Date().toISOString(),
                     sightings: [],
-                    altNames: []
+                    altNames: [],
+                    topicSightings: {}
                 };
             }
             
             const entry = privateProfiles[userCard];
             entry.lastSeen = new Date().toISOString();
+            
+            // Log this sighting
             entry.sightings.push({
                 timestamp: new Date().toISOString(),
+                topicId: currentTopicId,
                 topicUrl: window.location.href,
                 topicTitle: document.title
             });
+            
+            // Track this topic encounter
+            entry.topicSightings[currentTopicId] = new Date().toISOString();
             
             // Keep only last 50 sightings per user
             if (entry.sightings.length > 50) {
@@ -60,7 +101,8 @@ javascript: (function () {
                 privateProfiles[userCard] = {
                     firstSeen: new Date().toISOString(),
                     sightings: [],
-                    altNames: []
+                    altNames: [],
+                    topicSightings: {}
                 };
             }
             
@@ -91,7 +133,7 @@ javascript: (function () {
                         // Check if profile is private
                         const isPrivate = !profile.last_seen_at && !profile.last_posted_at;
                         
-                        if (isPrivate) {
+                        if (isPrivate && shouldLogPrivateProfile(userCard)) {
                             logPrivateProfileUser(userCard);
                         }
                         
@@ -275,6 +317,21 @@ javascript: (function () {
                 margin-top: 8px;
             "
         >📥 Export CSV</button>
+
+        <button
+            id="fools-clear-private"
+            style="
+                background: #472a2a;
+                color: #ff6b6b;
+                border: 1px solid #ff4444;
+                padding: 8px 14px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 11px;
+                width: 100%;
+                margin-top: 8px;
+            "
+        >🗑️ Clear Private Log</button>
     `;
 
     document.body.appendChild(modal);
@@ -310,6 +367,13 @@ javascript: (function () {
                 report += `  First Seen: ${new Date(data.firstSeen).toLocaleString()}\n`;
                 report += `  Last Seen: ${new Date(data.lastSeen).toLocaleString()}\n`;
                 report += `  Total Sightings: ${data.sightings.length}\n`;
+                
+                // List unique topics where seen
+                const topicIds = Object.keys(data.topicSightings || {});
+                if (topicIds.length > 0) {
+                    report += `  Seen in ${topicIds.length} unique topic(s)\n`;
+                }
+                
                 if (data.altNames && data.altNames.length > 0) {
                     report += `  Possible Alts: ${data.altNames.join(', ')}\n`;
                 }
@@ -337,7 +401,7 @@ javascript: (function () {
         
         reportModal.innerHTML = `
             <h3 style="color: #4ade80; margin-top: 0;">Private Profile Log (${count} users)</h3>
-            <textarea readonly style="
+            <textarea id="reportText" readonly style="
                 width: 100%;
                 height: 350px;
                 background: #1e1e1e;
@@ -372,13 +436,6 @@ javascript: (function () {
             </div>
         `;
         
-        // Add hidden textarea for clipboard
-        const hiddenArea = document.createElement('textarea');
-        hiddenArea.id = 'reportText';
-        hiddenArea.value = report;
-        hiddenArea.style.display = 'none';
-        reportModal.appendChild(hiddenArea);
-        
         document.body.appendChild(reportModal);
     };
 
@@ -387,11 +444,12 @@ javascript: (function () {
             localStorage.getItem('wow_private_profiles') || '{}'
         );
         
-        let csv = 'UserCard,FirstSeen,LastSeen,TotalSightings,Alts\n';
+        let csv = 'UserCard,FirstSeen,LastSeen,TotalSightings,UniquTopics,Alts\n';
         
         for (const [userCard, data] of Object.entries(privateProfiles)) {
             const alts = data.altNames ? data.altNames.join(';') : '';
-            csv += `"${userCard}","${data.firstSeen}","${data.lastSeen}",${data.sightings.length},"${alts}"\n`;
+            const uniqueTopics = data.topicSightings ? Object.keys(data.topicSightings).length : 0;
+            csv += `"${userCard}","${data.firstSeen}","${data.lastSeen}",${data.sightings.length},${uniqueTopics},"${alts}"\n`;
         }
         
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -400,6 +458,14 @@ javascript: (function () {
         link.download = `wow-private-profiles-${new Date().toISOString().split('T')[0]}.csv`;
         link.click();
         alert('CSV exported!');
+    };
+
+    document.getElementById('fools-clear-private').onclick = () => {
+        if (confirm('Are you sure? This will delete all tracked private profile data.')) {
+            localStorage.removeItem('wow_private_profiles');
+            alert('Private profile log cleared!');
+            modal.remove();
+        }
     };
 
     async function syncNativeIgnores() {
