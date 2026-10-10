@@ -153,8 +153,20 @@ javascript: (function () {
                         container.style.color = isPrivate ? '#ff6b6b' : '#38bdf8';
                         container.style.marginTop = '4px';
                         container.style.lineHeight = '1.2';
+                        
+                        let badge = '';
+                        if (isPrivate) {
+                            const privateProfiles = JSON.parse(
+                                localStorage.getItem('wow_private_profiles') || '{}'
+                            );
+                            const topicCount = privateProfiles[userCard] ? Object.keys(privateProfiles[userCard].topicSightings || {}).length : 0;
+                            if (topicCount > 1) {
+                                badge = ` 🔄×${topicCount}`;
+                            }
+                        }
+                        
                         container.innerHTML = `
-                            <div><strong>[ID: ${userCard}]${isPrivate ? ' 🔒 PRIVATE' : ''}</strong></div>
+                            <div><strong>[ID: ${userCard}]${isPrivate ? ' 🔒 PRIVATE' + badge : ''}</strong></div>
                             <div>last seen: ${lastSeen}</div>
                             <div>last post: ${lastPost}</div>
                             <div>read time: ${readTime}</div>
@@ -234,8 +246,26 @@ javascript: (function () {
 
         <p>©MIT Lazyeyez</p>
 
+        <div style="background: #1a2a3a; border: 1px solid #2a4a6a; border-radius: 4px; padding: 10px; margin-bottom: 12px; font-size: 11px;">
+            <div style="color: #8ecbef; margin-bottom: 6px;"><strong>Logged In As:</strong></div>
+            <div style="color: #4ade80; word-break: break-all; margin-bottom: 8px; font-family: monospace;">${appUserId}</div>
+            <button
+                id="fools-reset-id"
+                style="
+                    background: #472a2a;
+                    color: #ff9999;
+                    border: 1px solid #ff6666;
+                    padding: 6px 10px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 10px;
+                    width: 100%;
+                "
+            >Reset User ID</button>
+        </div>
+
         <p style="font-size: 12px; color: #2eb689c5; margin-bottom: 6px;">
-            Enter the Users ID you wish to ignore (Logged in as: ${appUserId})
+            Enter the Users ID you wish to ignore
         </p>
 
         <div id="fools-status" style="font-size: 11px; color: #8ecbef; margin-bottom: 8px; font-family: monospace;">
@@ -338,6 +368,14 @@ javascript: (function () {
 
     document.getElementById('fools-close').onclick = () => modal.remove();
 
+    document.getElementById('fools-reset-id').onclick = () => {
+        if (confirm('Reset your Blizzard Forum User ID? You will be prompted to enter it again on next run.')) {
+            localStorage.removeItem('wow_app_user_id');
+            alert('User ID reset! Reload the page and run the bookmarklet again.');
+            modal.remove();
+        }
+    };
+
     document.getElementById('fools-save').onclick = () => {
         const val = document.getElementById('fools-input').value;
         const newList = val
@@ -356,7 +394,7 @@ javascript: (function () {
         );
         
         let report = 'PRIVATE PROFILE TRACKING\n';
-        report += '='.repeat(60) + '\n\n';
+        report += '='.repeat(70) + '\n\n';
         
         const count = Object.keys(privateProfiles).length;
         if (count === 0) {
@@ -371,7 +409,15 @@ javascript: (function () {
                 // List unique topics where seen
                 const topicIds = Object.keys(data.topicSightings || {});
                 if (topicIds.length > 0) {
-                    report += `  Seen in ${topicIds.length} unique topic(s)\n`;
+                    report += `  Seen in ${topicIds.length} unique topic(s):\n`;
+                    topicIds.forEach((topicId, idx) => {
+                        const sighting = data.sightings.find(s => s.topicId === topicId);
+                        if (sighting) {
+                            report += `    ${idx + 1}. ${topicId}\n`;
+                            report += `       Title: ${sighting.topicTitle}\n`;
+                            report += `       URL: ${sighting.topicUrl}\n`;
+                        }
+                    });
                 }
                 
                 if (data.altNames && data.altNames.length > 0) {
@@ -393,8 +439,8 @@ javascript: (function () {
             border: 2px solid #22c55e;
             padding: 20px;
             border-radius: 8px;
-            width: 600px;
-            max-height: 500px;
+            width: 700px;
+            max-height: 600px;
             overflow-y: auto;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.9);
         `;
@@ -403,7 +449,7 @@ javascript: (function () {
             <h3 style="color: #4ade80; margin-top: 0;">Private Profile Log (${count} users)</h3>
             <textarea id="reportText" readonly style="
                 width: 100%;
-                height: 350px;
+                height: 400px;
                 background: #1e1e1e;
                 color: #4ade80;
                 border: 1px solid #22c55e;
@@ -411,7 +457,7 @@ javascript: (function () {
                 padding: 8px;
                 box-sizing: border-box;
                 font-family: monospace;
-                font-size: 11px;
+                font-size: 10px;
             ">${report}</textarea>
             <div style="margin-top: 12px; display: flex; gap: 8px;">
                 <button onclick="this.parentElement.parentElement.remove()" style="
@@ -444,12 +490,13 @@ javascript: (function () {
             localStorage.getItem('wow_private_profiles') || '{}'
         );
         
-        let csv = 'UserCard,FirstSeen,LastSeen,TotalSightings,UniquTopics,Alts\n';
+        let csv = 'UserCard,FirstSeen,LastSeen,TotalSightings,UniqueTopics,Topics,Alts\n';
         
         for (const [userCard, data] of Object.entries(privateProfiles)) {
             const alts = data.altNames ? data.altNames.join(';') : '';
             const uniqueTopics = data.topicSightings ? Object.keys(data.topicSightings).length : 0;
-            csv += `"${userCard}","${data.firstSeen}","${data.lastSeen}",${data.sightings.length},${uniqueTopics},"${alts}"\n`;
+            const topicList = data.topicSightings ? Object.keys(data.topicSightings).join(';') : '';
+            csv += `"${userCard}","${data.firstSeen}","${data.lastSeen}",${data.sightings.length},${uniqueTopics},"${topicList}","${alts}"\n`;
         }
         
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
